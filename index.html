@@ -1,0 +1,482 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>reveal.js</title>
+
+		<link rel="stylesheet" href="css/reset.css">
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/black.css">
+
+		<!-- Theme used for syntax highlighting of code -->
+		<link rel="stylesheet" href="lib/css/monokai.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section><h3>TypeScript Advanced</h3></section>
+				<section>
+					<h5>improvement readability with numeric separator</h5>
+					<pre class="javascript"><code  class="language-javascript" >
+const num = 1000000000
+const num = 1_000_000_000
+
+setTimeout(()=>{
+// bla bla...
+},2_500)
+					</code></pre>
+				</section>
+
+
+
+<section>
+		<h5>definite assignment assertion</h5>
+		<pre class="javascript"><code>
+			
+	
+	
+class Library {
+titles!: string[];
+// ^
+// Notice this '!' modifier.
+// This is the "definite assignment assertion"
+}
+
+const library = new Library();
+
+//compile error, but not TS error
+library.titles.forEach(title => {
+// do stuff
+});
+	
+		</code></pre>
+		Use the definite assignment assertion operator to ask TypeScript to ignore that property.
+	</section>
+	
+
+	<section>
+			<h5>definite assignment assertion</h5>
+			To ensure that TypeScript picks up that we have an unsafe class property.
+			<br>
+<p class=".hljs-deletion">tsconfig.json:</p>
+			<pre class="javascript"><code>
+		
+"noImplicitAny": true /* Raise error on expressions and declarations with an implied 'any' type. */,
+"strictNullChecks": true /* Enable strict null checks. */,
+				</code>
+				</pre>
+		</section>
+		
+
+
+
+
+<section>
+		<h5>"in" operator</h5>
+To address the unsafety we have a few options:
+
+<ul>
+	<li>allow undefined as a type on the property; requires guards all over our code</li>
+	<li>initialise the property where it is defined</li>
+	<li>initialise the property inside the constructor</li>
+	<li>use TypeScript's definite assignment operator (!) to indicate that a value will be provided to the class when instantiated</li>
+</ul>
+
+
+
+
+
+
+use TypeScript's definite assignment operator (!) to indicate that a value will be provided to the class when instantiated
+</section>
+
+
+
+
+<section>
+	<h5>"in" operator</h5>
+	Using the JavaScript “in” operator to infer the exact type of an object
+	<pre class="javascript"><code>
+interface Admin {
+ id: string;
+ role: string;
+}
+
+interface User {
+ email: string;
+}
+
+function redirect2(usr: Admin | User) {
+ if ('role' in usr) {
+  routeToAdminPage(usr.role);
+ } else {
+  routeToHomePage(usr.email);
+ }
+}
+	</code></pre>
+</section>
+
+
+
+
+<section>
+	<h5>Automatically infer TypeScript types in switch statements</h5>
+	<pre class="javascript"><code>
+interface Action {
+ type: string;
+}
+
+interface A implements Action {
+ readonly type: string = 'A';
+ someProp: string;
+}
+
+interface B implements Action {
+ readonly type: string = 'B';
+}
+
+const reducer = (state: State, action: Action) {
+ switch(action.type) {
+ case 'A': {
+  return {...state, someProp: action.someProp}
+  }
+ }
+}
+	</code></pre>
+	type error because someProp is not defined on Action.
+</section>
+
+
+<section>
+		<h5>Automatically infer TypeScript types in switch statements</h5>
+		type MyActions = A | B;
+	<pre class="javascript"><code>
+interface Action {
+ type: string;
+}
+
+interface A implements Action {
+ // no `type` provided for type property - we now have a unique string literal
+ readonly type = 'A';
+ someProp: string;
+}
+
+interface B implements Action {
+ // and here
+ readonly type = 'B';
+}
+
+// create the union type
+type MyActions = A | B;
+
+// use the union type in the reducer's type definition
+const reducer = (state: State, action: MyActions) {
+switch(action.type) {
+ case 'A': {
+  return {...state, someProp: action.someProp}
+ }
+
+// ...
+
+ default: {
+// indicate to the compiler that we should never get here
+  const x: never = action;
+  }
+ }
+}
+	</code></pre>
+</section>
+
+
+<section>
+	<h5> type modifiers</h5>
+
+	<pre class="javascript"><code>
+interface Person {
+ name: string;
+ age: number;
+ favoriteColor?: string;
+}
+	</code></pre>
+</section>
+
+
+<section>
+	<h5> type modifiers</h5>
+	Mark every property in Person as readonly
+	<pre class="javascript"><code>
+type PersonReadonly = {
+ +readonly [K in keyof Person]: Person[k];
+}
+
+	</code></pre>
+</section>
+
+<section>
+	<h5> type modifiers</h5>
+	Remove the optional flag from all properties
+	<pre class="javascript"><code>
+type PersonNoOptionals = {
+ [K in keyof Person]-?: Person[k];
+}
+	</code></pre>
+</section>
+
+<section>
+	<h5> type modifiers</h5>
+	Allow string for all properties
+	<pre class="javascript"><code>
+type PersonNoOptionals = {
+ [K in keyof Person]: Person[k] | string;
+}
+	</code></pre>
+</section>
+
+
+<section>
+		<h5> type modifiers</h5>
+		example:
+	<pre class="javascript"><code>
+interface Pet {
+ name: string;
+ age: number;
+ favouritePark?: string;
+}
+
+type PetReadonly = {+readonly [K in keyof Pet]: Pet[K]};
+
+/**
+* Make all properties as optional
+*/
+type PetOptional = {[K in keyof Pet]?: Pet[K]};
+
+/**
+* Add string as a valid type to all proeprties
+*/
+type PetWithString = {[K in keyof Pet]?: Pet[K] | string};
+
+/**
+* Remove the ootional status from all properties
+*
+* We can remove the optional flag from properties by prepending the ? sign with
+* -
+*/
+type PetNoOptionals = {[K in keyof Pet]-?: Pet[K]};
+
+const pet: Pet = {name: 'Sam', age: 5};
+const petReadonly: PetReadonly = {name: 'Sam', age: 5};
+const petOptional: PetOptional = {name: 'Sam'};
+const petWithStringAge: PetWithString = {name: 'Sam', age: '5'};
+const petNoOptionals: PetNoOptionals = {
+ age: 5,
+ favouritePark: 'House',
+ name: 'Sam',
+};
+
+pet.age = 6;
+petNoOptionals.age = 6;
+	</code></pre>
+</section>
+
+<section>
+	<h5>Difference between type and interface</h5>
+
+	<ul>
+		<li>types are generally used to describe complex objects</li>
+		<li>interfaces are generally used in a more object-oriented fashion to describe the shape of objects</li>
+		<li>two objects that are assigned a type and interface with the same structure can be assigned to one another because TypeScript uses structural typing</li>
+	</ul>
+
+</section>
+
+<section>
+		<h5>Difference between type and interface</h5>
+
+
+	<pre><code>
+interface JQuery {
+	myFunc(): JQuery
+}
+
+// this will typecheck
+$(this).myFunc(...)
+//One caveat: this is only possible if the library is authored as an interface. Make sure to author your libraries' public APIs as interfaces to allow others to extend them
+	</code></pre>
+</section>
+
+
+<section>
+		<h5>Difference between type and interface</h5>
+		TypeScript will merge the properties of interfaces with the same names
+	<pre class="javascript"><code>
+interface Foo {
+ a: string;
+}
+interface Foo {
+ b: string;
+}
+/**
+* foo has properties a and b
+*/
+let foo: Foo;
+	</code></pre>
+
+</section>
+
+
+
+<section>
+	<h5>Build self-referencing type aliases in TypeScript</h5>
+	interfaces can be self-referencing:
+	<pre class="javascript"><code>
+interface TreeNode<T> {
+	value: T;
+	left?: TreeNode<T>;
+	right?: TreeNode<T>;
+}
+	</code></pre>
+</section>
+
+
+
+<section>
+		<h5>Build self-referencing type aliases in TypeScript</h5>
+	This allows one to continue traversing an item with valid type checking
+	<pre class="javascript"><code>
+let node: TreeNode<string> = {value: 'foo'}
+
+/**
+* unsafe, but valid TypeScript
+*/
+node.left.left.left.value;
+	</code></pre>
+</section>
+
+
+
+<section>
+	<h5>Use the TypeScript "unknown" type to avoid runtime errors</h5>
+	<ul>
+		<li>any is the most relaxed type in TypeScript</li>
+		<li>one can assign any type to a value with type any</li>
+		<li>one can access any property on a type declared as any</li>
+	</ul>
+	<pre class="javascript"><code>
+const obj: any = '';
+// valid
+obj.a.b.c.d
+// or
+obj()
+	</code></pre>
+</section>
+
+
+<section>
+		<h5>Use the TypeScript "unknown" type to avoid runtime errors</h5>
+	<pre class="javascript"><code>
+const objAny: any = 'foo';
+
+// valid TypeScript
+objAny.a.b.c.d
+
+const objUnknown: unknown = 'bar';
+
+// invalid TypeScript
+objUnknown.a
+
+// valid TypeScript
+if (objUnknown.hasOwnProperty('a')) {
+	console.log(objUnknown.a)
+}
+	</code></pre>
+</section>
+
+
+<section>
+	<h5>Conditionally assigning types</h5>
+	One can conditionally assign types to properties using ternary operators
+	<pre class="javascript"><code>
+interface GenericWithAny<T> {
+ value: T;
+ someProp: any;
+}
+
+/**
+* no type hinting / checking on itemAny.someProp
+*/
+const itemAny: GenericWithAny<string> = {
+ value: 'foo',
+ someProp: null;
+}
+
+interface GenericWithConditional<T> {
+ value: T;
+ someProp: T extends string ? Array : number;
+}
+
+/**
+* We know that someProp must be an array, and we get all the associated hinting
+* and typechecking now
+*/
+const item1: GenericWithConditional<string> = {
+ value: 'bar',
+ someProp: null,
+}
+	</code></pre>
+</section>
+
+
+<section>
+	<h5>Conditional types and unions of types</h5>
+	conditional types distribute over unions of types
+	<pre class="javascript"><code>
+type TypeArray<T> = T extends any[] ? T : never;
+type StringsOrNumbers = TypeArray<string | number | string[] | number[]>;
+	</code></pre>
+</section>
+
+
+<section>
+	<h5>Avoid union types requiring overloaded functions for dynamic type arguments</h5>
+	Instead of returning a simple union from a function, we can use a conditional type to specify which type will be returned.
+	<pre class="javascript"><code>
+interface ItemServiceConditionalStrict {
+ getItem<T extends string | number>(id: T): T extends string ? Book : Tv;
+}
+	</code></pre>
+</section>
+ 
+
+ 
+
+			</div>
+		</div>
+
+		<script src="js/reveal.js"></script>
+
+		<script>
+			// More info about config & dependencies:
+			// - https://github.com/hakimel/reveal.js#configuration
+			// - https://github.com/hakimel/reveal.js#dependencies
+			Reveal.initialize({
+				dependencies: [
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true }
+				]
+			});
+		</script>
+	</body>
+</html>
